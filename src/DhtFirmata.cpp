@@ -52,7 +52,7 @@ uint8_t DhtFirmata::dht_read(byte pin, byte*buffer)
 
     // REQUEST SAMPLE
   {
-    InterruptLock lock;
+    DhtInterruptLock lock;
   
     pinMode(pin, OUTPUT);
     digitalWrite(pin, LOW);
