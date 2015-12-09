@@ -22,13 +22,13 @@
  * software can test whether it will be compatible with the currently
  * installed firmware. */
 #define FIRMATA_MAJOR_VERSION   2 // for non-compatible changes
-#define FIRMATA_MINOR_VERSION   5 // for backwards compatible changes
+#define FIRMATA_MINOR_VERSION   6 // for backwards compatible changes
 #define FIRMATA_BUGFIX_VERSION  0 // for bugfix releases
 
 // The version of this library, it is different than the version of the Firmata protocol.
 // In other words, ConfigurableFirmata 2.8.0 implements version 2.5.0 of the Firmata protocol.
 #define FIRMWARE_MAJOR_VERSION  2 // for non-compatible changes
-#define FIRMWARE_MINOR_VERSION  8 // for backwards compatible changes
+#define FIRMWARE_MINOR_VERSION  9 // for backwards compatible changes
 #define FIRMWARE_BUGFIX_VERSION 0 // for bugfix releases
 
 #define MAX_DATA_BYTES          64 // max number of data bytes in incoming messages
@@ -70,6 +70,8 @@
 #define REPORT_FIRMWARE         0x79 // report name and version of the firmware
 #define SAMPLING_INTERVAL       0x7A // set the poll rate of the main loop
 #define SCHEDULER_DATA          0x7B // send a createtask/deletetask/addtotask/schedule/querytasks/querytask request to the scheduler
+#define DHT_QUERY		0x7C // request DHT11/21/22 data
+#define DHT_RESPONSE            0x7D // reply with data from DHT sensor
 #define SYSEX_NON_REALTIME      0x7E // MIDI Reserved for non-realtime messages
 #define SYSEX_REALTIME          0x7F // MIDI Reserved for realtime messages
 
@@ -92,8 +94,9 @@
 #define PIN_MODE_ENCODER        0x09 // pin configured for rotary encoders
 #define PIN_MODE_SERIAL         0x0A // pin configured for serial communication
 #define PIN_MODE_PULLUP         0x0B // enable internal pull-up resistor for pin
+#define PIN_MODE_DHT            0x0C // pin configured for DHT Sensor
 #define PIN_MODE_IGNORE         0x7F // pin configured to be ignored by digitalWrite and capabilityResponse
-#define TOTAL_PIN_MODES         13
+#define TOTAL_PIN_MODES         14
 // DEPRECATED as of Firmata v2.5
 #define ANALOG                  0x02 // same as PIN_MODE_ANALOG
 #define PWM                     0x03 // same as PIN_MODE_PWM

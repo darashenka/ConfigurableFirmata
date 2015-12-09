@@ -499,6 +499,9 @@ writePort(port, value, bitmask):  Write an 8 bit port.
 #define IS_PIN_SERIAL(p)        0
 #endif
 
+#ifndef IS_PIN_DHT
+#define IS_PIN_DHT(p)           IS_PIN_DIGITAL(p)
+#endif
 /*==============================================================================
  * readPort() - Read an 8 bit port
  *============================================================================*/

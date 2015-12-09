@@ -118,6 +118,9 @@ FirmataExt firmataExt;
 #include <FirmataScheduler.h>
 FirmataScheduler scheduler;
 
+#include <DhtFirmata.h>
+DhtFirmata dht;
+
 // To add Encoder support you must first install the FirmataEncoder and Encoder libraries:
 // https://github.com/firmata/FirmataEncoder
 // https://www.pjrc.com/teensy/td_libs_Encoder.html
@@ -230,6 +233,9 @@ void setup()
 #endif
 #ifdef I2CFirmata_h
   firmataExt.addFeature(i2c);
+#endif
+#ifdef DhtFirmata_h
+  firmataExt.addFeature(dht);
 #endif
 #ifdef OneWireFirmata_h
   firmataExt.addFeature(oneWire);
