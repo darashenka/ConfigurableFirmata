@@ -65,9 +65,9 @@ uint8_t DhtFirmata::dht_read(byte pin, byte*buffer, uint8_t buflen, byte initial
         loopCnt = DHTLIB_TIMEOUT;
         while(digitalRead(pin) == initiallevel)
         {
-            if (--loopCnt == 0) { errorcode=2; return DHTLIB_ERROR_TIMEOUT; }
+            if (--loopCnt == 0) { errorcode=3; return DHTLIB_ERROR_TIMEOUT; }
             tn = micros();
-            if(tn - t > timeout ) { errorcode=1; return idx; }
+            if(tn - t > timeout ) { errorcode=4; return idx; }
         }
         buffer [idx] = min(tn-t,127);
         
@@ -99,21 +99,21 @@ uint8_t DhtFirmata::processCommand(byte pin, byte* buffer,uint8_t buflen, byte a
       case DHT_WAIT_HIGH:
       case DHT_WAIT_LOW:
              byte tempbuf[2];
-             cmd = dht_read(PIN_TO_DIGITAL(pin),tempbuf,0,cmd-DHT_WAIT_OFFSET, argv[i+1]);
+             cmd = dht_read(pin,tempbuf,0,cmd-DHT_WAIT_OFFSET, argv[i+1]);
              if(errorcode)
                 return i;
              i++; // 2-byte command;
              break; 
       case DHT_READ_HIGH:
       case DHT_READ_LOW:
-             cmd = dht_read(PIN_TO_DIGITAL(pin),buffer + bufpos, min(argv[i+1], buflen - bufpos), cmd-DHT_READ_OFFSET, argv[i+2] );
+             cmd = dht_read(pin,buffer + bufpos, min(argv[i+1], buflen - bufpos), cmd-DHT_READ_OFFSET, argv[i+2] );
              if(errorcode)
                 return i;
              bufpos += cmd;
              i+=2; // 3-byte: command, length, timeout
              break;
       defaut:
-             errorcode=3
+             errorcode=64;
              return i;
     }
   }
@@ -134,10 +134,9 @@ boolean DhtFirmata::handleSysex(byte command, byte argc, byte* argv)
   Firmata.write(START_SYSEX);
   Firmata.write(DHT_RESPONSE);
   Firmata.write(pin);
+  Firmata.write(errorcode);
+  Firmata.write(readCnt);
   Encoder7Bit.startBinaryWrite();
-  Encoder7Bit.writeBinary(errorcode);
-  Encoder7Bit.writeBinary(readCnt);
-
   for (i = 0;!errorcode && i < readCnt; i++) 
     Encoder7Bit.writeBinary(buffer[i]);
   Encoder7Bit.endBinaryWrite();
