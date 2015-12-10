@@ -62,7 +62,7 @@ uint8_t DhtFirmata::dht_read(byte pin, byte*buffer, uint8_t buflen, byte initial
     {
 
         loopCnt = DHTLIB_TIMEOUT;
-        while(digitalRead(pin) == initial)
+        while(digitalRead(pin) == initiallevel)
         {
             if (--loopCnt == 0) return DHTLIB_ERROR_TIMEOUT;
             tn = micros();
@@ -70,7 +70,7 @@ uint8_t DhtFirmata::dht_read(byte pin, byte*buffer, uint8_t buflen, byte initial
         }
         buffer [idx] = min(tn-t,127);
         
-        initial = initial == HIGH ? LOW : HIGH; // invert expectd value
+        initiallevel = initiallevel == HIGH ? LOW : HIGH; // invert expectd value
         t = tn;
     }
   }
