@@ -123,7 +123,7 @@ boolean DhtFirmata::handleSysex(byte command, byte argc, byte* argv)
     return false;
 
   byte buffer[6];
-
+  uint8_t i = 0;
 
   byte pin= argv[0];
   uint8_t readCnt = dht_read(PIN_TO_DIGITAL(pin),buffer,40);
