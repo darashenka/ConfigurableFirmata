@@ -36,9 +36,6 @@ void DhtFirmata::handleCapability(byte pin)
 uint8_t DhtFirmata::dht_read(byte pin, uint8_t multiplier, byte*buffer, uint8_t buflen, byte initiallevel, uint16_t timeout0)
 {
 
-  uint8_t idx = 0;
-  uint16_t loopCnt;
-  uint16_t startLoopCnt = (F_CPU/40000)*(uint16_t)multiplier;
 
   pinMode(pin, INPUT);
 
@@ -46,6 +43,10 @@ uint8_t DhtFirmata::dht_read(byte pin, uint8_t multiplier, byte*buffer, uint8_t 
   uint32_t t = micros();
   uint32_t tn = micros();
   uint32_t timeout = timeout0 * multiplier;
+
+  uint8_t idx = 0;
+  uint32_t loopCnt;
+  uint32_t startLoopCnt = (F_CPU/40000)*timeout;
 
   // replace digitalRead() with Direct Port Reads.
   // reduces footprint ~100 bytes => portability issue?
@@ -87,36 +88,38 @@ uint8_t DhtFirmata::dht_read(byte pin, uint8_t multiplier, byte*buffer, uint8_t 
 }
 uint8_t DhtFirmata::processCommand(byte pin, byte multiplier, byte* buffer,uint8_t buflen, byte argc, byte* argv)
 {
-  uint8_t i =0;
+  int32_t i =0;
+  uint8_t idx=0;
   uint8_t bufpos = 0;
 
   // EMPTY BUFFER
   for (i = 0; i < buflen; i++)
     buffer[i] = 0;
 
-  for(i=0;i<argc;i++){
-    byte cmd = argv[i];
+  for(idx=0;idx<argc;idx++){
+    byte cmd = argv[idx];
     // switch did not work somehow
     if (cmd == DHT_SET_HIGH || cmd == DHT_SET_LOW ){
              pinMode(pin, OUTPUT);
              digitalWrite(pin, cmd);
-             delayMicroseconds(multiplier*argv[i+1]);
-             i++; // 2-byte command
+             for(i=multiplier*(argv[idx+1] + (argv[idx+2] << 7));i>0;i-=16383)
+                delayMicroseconds(min(i,16383)); // support arg max 16383
+             idx+=2; // 3-byte command
     } else if (cmd == DHT_WAIT_HIGH || cmd == DHT_WAIT_LOW ){
              byte tempbuf[2];
-             cmd = dht_read(pin,multiplier,tempbuf,0,cmd-DHT_WAIT_OFFSET,argv[i+1]);
+             cmd = dht_read(pin,multiplier,tempbuf,0,cmd-DHT_WAIT_OFFSET,argv[idx+1] + (argv[idx+2] << 7));
              if(errorcode)
-                return i;
-             i++; // 2-byte command;
+                return idx;
+             idx+=2; // 3-byte command;
     } else if (cmd == DHT_READ_HIGH || cmd == DHT_READ_LOW ){
-             cmd = dht_read(pin,multiplier,buffer + bufpos, min(argv[i+1], buflen - bufpos), cmd-DHT_READ_OFFSET, argv[i+2] );
+             cmd = dht_read(pin,multiplier,buffer + bufpos, min(argv[idx+1], buflen - bufpos), cmd-DHT_READ_OFFSET, argv[idx+2] + (argv[idx+3] << 7)) ;
              if(errorcode)
-                return i;
+                return idx;
              bufpos += cmd;
-             i+=2; // 3-byte: command, length, timeout
+             idx+=3; // 4-byte: command, length, timeout2
     } else {
              errorcode=64;
-             return i;
+             return idx;
     }
   }
  return bufpos;
