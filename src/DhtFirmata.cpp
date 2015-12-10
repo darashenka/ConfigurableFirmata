@@ -31,102 +31,103 @@ void DhtFirmata::handleCapability(byte pin)
     Firmata.write(1);
   }
 }
-
-uint8_t DhtFirmata::dht_read(byte pin, byte*buffer, uint8_t buflen_bits)
-{
-#define DHTLIB_DHT11_WAKEUP     18
-#define DHTLIB_DHT_WAKEUP       1
-#define DHTLIB_TIMEOUT (F_CPU/40000)
 #define DHTLIB_ERROR_TIMEOUT    0
-  byte wakeupDelay=DHTLIB_DHT11_WAKEUP;
+#define DHTLIB_TIMEOUT (F_CPU/40000)
+// read times for level change
+uint8_t DhtFirmata::dht_read(byte pin, byte*buffer, uint8_t buflen, byte initiallevel, byte timeout)
+{
 
-    // INIT BUFFERVAR TO RECEIVE DATA
-  uint8_t mask = 128;
   uint8_t idx = 0;
-
-    // GET ACKNOWLEDGE or TIMEOUT
-  uint16_t loopCnt = DHTLIB_TIMEOUT;
-
-  uint8_t i = 0;
+  uint16_t loopCnt;
 
    // timestamp
   uint32_t t = micros();
+  uint32_t tn = micros();
 
-    // EMPTY BUFFER
-  for (i = 0; i < (buflen_bits+7)/8; i++)
-    buffer[i] = 0;
+  pinMode(pin, INPUT);
 
-    // REQUEST SAMPLE
+  // waif for initial
+  loopCnt = DHTLIB_TIMEOUT;
+  while( digitalRead(pin) != initiallevel ){
+       if (micros() - t > timeout ) return DHTLIB_ERROR_TIMEOUT;
+       if (--loopCnt == 0) return DHTLIB_ERROR_TIMEOUT; // micros can overflow
+  }
+  
+
+  
   {
     DhtInterruptLock lock;
-  
-    pinMode(pin, OUTPUT);
-    digitalWrite(pin, LOW);
-    delay(wakeupDelay);
-    digitalWrite(pin, HIGH);
-    delayMicroseconds(40);
-    pinMode(pin, INPUT);
 
-
-
-    while(digitalRead(pin) == LOW)
+    for (t = micros(),idx = 0; idx < buflen; idx++)
     {
-        if (--loopCnt == 0) return DHTLIB_ERROR_TIMEOUT;
-    }
-
-    loopCnt = DHTLIB_TIMEOUT;
-    while(digitalRead(pin) == HIGH)
-    {
-        if (--loopCnt == 0) return DHTLIB_ERROR_TIMEOUT;
-    }
-    // READ THE OUTPUT
-    for (i = buflen_bits; i != 0; i--)
-    {
-        loopCnt = DHTLIB_TIMEOUT;
-        while(digitalRead(pin) == LOW)
-        {
-            if (--loopCnt == 0) return DHTLIB_ERROR_TIMEOUT;
-        }
-
-        t = micros();
 
         loopCnt = DHTLIB_TIMEOUT;
-        while(digitalRead(pin) == HIGH)
+        while(digitalRead(pin) == initial)
         {
             if (--loopCnt == 0) return DHTLIB_ERROR_TIMEOUT;
+            tn = micros();
+            if(tn - t > timeout ) return idx;
         }
-
-        // duration > 40us => bit is set 
-        if ((micros() - t) > 40)
-        {
-            buffer[idx] |= mask;
-        }
-
-        mask >>= 1;
-        if (mask == 0)   // next byte?
-        {
-            mask = 128;
-            idx++;
-        }
+        buffer [idx] = min(tn-t,127);
+        
+        initial = initial == HIGH ? LOW : HIGH; // invert expectd value
+        t = tn;
     }
   }
-  pinMode(pin, OUTPUT);
-  digitalWrite(pin, HIGH);
   return idx;
+}
+uint8_t DhtFirmata::processCommand(byte pin, byte* buffer,uint8_t buflen, byte argc, byte* argv)
+{
+  uint8_t i =0;
+  uint8_t bufpos = 0;
+
+  // EMPTY BUFFER
+  for (i = 0; i < buflen; i++)
+    buffer[i] = 0;
+
+  for(i=1;i<argc;i++){
+    byte cmd = argv[i];
+    switch (cmd) {
+      DHT_SET_HIGH:
+      DHT_SET_LOW:
+             pinMode(pin, OUTPUT);
+             digitalWrite(pin, cmd);
+             delay(argv[i+1]);
+             i++; // 2-byte command
+             break;
+      DHT_WAIT_HIGH:
+      DHT_WAIT_LOW:
+             byte tempbuf[2];
+             cmd = dht_read(PIN_TO_DIGITAL(pin),tempbuf,1,cmd-DHT_WAIT_OFFSET, argv[i+1]);
+             if(!cmd)
+                return DHTLIB_ERROR_TIMEOUT;
+             i++ // 2-byte command;
+             break; 
+      DHT_READ_HIGH:
+      DHT_READ_LOW:
+             cmd = dht_read(PIN_TO_DIGITAL(pin),buffer + bufpos, min(argv[i+1], buflen - bufpos), cmd-DHT_READ_OFFSET, argv[i+2] );
+             if(!cmd)
+                return DHTLIB_ERROR_TIMEOUT;
+             bufpos += cmd;
+             i+=2; // 3-byte: command, length, timeout
+             break;
+      defaut:
+             return DHTLIB_ERROR_TIMEOUT;
+    }
+  }
+ return buflen;
 }
 boolean DhtFirmata::handleSysex(byte command, byte argc, byte* argv)
 {
   if (command != DHT_QUERY)
     return false;
 
-  if(argc != 1)
-    return false;
-
-  byte buffer[6];
+  byte buffer[MAX_DATA_BYTES];
   uint8_t i = 0;
 
   byte pin= argv[0];
-  uint8_t readCnt = dht_read(PIN_TO_DIGITAL(pin),buffer,40);
+
+  uint8_t readCnt = processCommand(PIN_TO_DIGITAL(pin),buffer,MAX_DATA_BYTES,argc-1,argv+1);
 
   Firmata.write(START_SYSEX);
   Firmata.write(DHT_RESPONSE);
