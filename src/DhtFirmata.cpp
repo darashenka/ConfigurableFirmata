@@ -86,7 +86,7 @@ uint8_t DhtFirmata::processCommand(byte pin, byte* buffer,uint8_t buflen, byte a
   for (i = 0; i < buflen; i++)
     buffer[i] = 0;
 
-  for(i=1;i<argc;i++){
+  for(i=0;i<argc;i++){
     byte cmd = argv[i];
     switch (cmd) {
       case DHT_SET_HIGH:
