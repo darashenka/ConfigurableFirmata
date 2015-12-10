@@ -101,7 +101,7 @@ uint8_t DhtFirmata::processCommand(byte pin, byte* buffer,uint8_t buflen, byte a
              cmd = dht_read(PIN_TO_DIGITAL(pin),tempbuf,1,cmd-DHT_WAIT_OFFSET, argv[i+1]);
              if(!cmd)
                 return DHTLIB_ERROR_TIMEOUT;
-             i++ // 2-byte command;
+             i++; // 2-byte command;
              break; 
       case DHT_READ_HIGH:
       case DHT_READ_LOW:
