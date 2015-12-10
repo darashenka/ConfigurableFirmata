@@ -32,7 +32,7 @@ void DhtFirmata::handleCapability(byte pin)
   }
 }
 
-uint8_t DhtFirmata::dht_read(byte pin, byte*buffer)
+uint8_t DhtFirmata::dht_read(byte pin, byte*buffer, uint8_t buflen_bits)
 {
 #define DHTLIB_DHT11_WAKEUP     18
 #define DHTLIB_DHT_WAKEUP       1
@@ -47,8 +47,14 @@ uint8_t DhtFirmata::dht_read(byte pin, byte*buffer)
     // GET ACKNOWLEDGE or TIMEOUT
   uint16_t loopCnt = DHTLIB_TIMEOUT;
 
+  uint8_t i = 0;
+
+   // timestamp
+  uint32_t t = micros();
+
     // EMPTY BUFFER
-  for (uint8_t i = 0; i < 5; i++) buffer[i] = 0;
+  for (i = 0; i < (buflen_bits+7)/8; i++)
+    buffer[i] = 0;
 
     // REQUEST SAMPLE
   {
@@ -74,7 +80,7 @@ uint8_t DhtFirmata::dht_read(byte pin, byte*buffer)
         if (--loopCnt == 0) return DHTLIB_ERROR_TIMEOUT;
     }
     // READ THE OUTPUT - 40 BITS => 5 BYTES
-    for (uint8_t i = 40; i != 0; i--)
+    for (i = buflen_bits; i != 0; i--)
     {
         loopCnt = DHTLIB_TIMEOUT;
         while(digitalRead(pin) == LOW)
@@ -82,7 +88,7 @@ uint8_t DhtFirmata::dht_read(byte pin, byte*buffer)
             if (--loopCnt == 0) return DHTLIB_ERROR_TIMEOUT;
         }
 
-        uint32_t t = micros();
+        t = micros();
 
         loopCnt = DHTLIB_TIMEOUT;
         while(digitalRead(pin) == HIGH)
@@ -90,10 +96,12 @@ uint8_t DhtFirmata::dht_read(byte pin, byte*buffer)
             if (--loopCnt == 0) return DHTLIB_ERROR_TIMEOUT;
         }
 
+        // duration > 40us => bit is set 
         if ((micros() - t) > 40)
         {
             buffer[idx] |= mask;
         }
+
         mask >>= 1;
         if (mask == 0)   // next byte?
         {
@@ -117,26 +125,21 @@ boolean DhtFirmata::handleSysex(byte command, byte argc, byte* argv)
   byte buffer[6];
 
 
-  byte pin= PIN_TO_DIGITAL(argv[0]);
-  byte readCnt = dht_read(pin,buffer);
+  byte pin= argv[0];
+  uint8_t readCnt = dht_read(PIN_TO_DIGITAL(pin),buffer,40);
 
   Firmata.write(START_SYSEX);
   Firmata.write(DHT_RESPONSE);
-  Firmata.write(readCnt);
-  for (uint8_t i = 0; i < readCnt; i++) 
-    Firmata.write(buffer[i]);
+  Firmata.write(pin);
+  Encoder7Bit.startBinaryWrite();
+  Encoder7Bit.writeBinary(readCnt);
+
+  for (i = 0; i < readCnt; i++) 
+    Encoder7Bit.writeBinary(buffer[i]);
+  Encoder7Bit.endBinaryWrite();
   Firmata.write(END_SYSEX);
 
-/*
-                  Encoder7Bit.startBinaryWrite();
-                  Encoder7Bit.writeBinary(correlationId & 0xFF);
-                  Encoder7Bit.writeBinary((correlationId >> 8) & 0xFF);
-                  for (int i = 0; i < numReadBytes; i++) {
-                    Encoder7Bit.writeBinary(device->read());
-                  }
-                  Encoder7Bit.endBinaryWrite();
-                  Firmata.write(END_SYSEX);
-*/
+
   return true;
 }
 
