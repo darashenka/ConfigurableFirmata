@@ -79,7 +79,7 @@ uint8_t DhtFirmata::dht_read(byte pin, byte*buffer, uint8_t buflen_bits)
     {
         if (--loopCnt == 0) return DHTLIB_ERROR_TIMEOUT;
     }
-    // READ THE OUTPUT - 40 BITS => 5 BYTES
+    // READ THE OUTPUT
     for (i = buflen_bits; i != 0; i--)
     {
         loopCnt = DHTLIB_TIMEOUT;

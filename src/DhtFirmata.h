@@ -27,7 +27,7 @@ class DhtFirmata: public FirmataFeature
   private:
     // data pinDht[TOTAL_PINS];
     // void oneWireConfig(byte pin, boolean power);
-   uint8_t dht_read(byte pin, byte*buffer);
+   uint8_t dht_read(byte pin, byte*buffer, uint8_t buflen_bits);
 
 };
 
