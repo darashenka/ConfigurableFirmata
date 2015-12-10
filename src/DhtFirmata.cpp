@@ -88,23 +88,23 @@ uint8_t DhtFirmata::processCommand(byte pin, byte* buffer,uint8_t buflen, byte a
   for(i=1;i<argc;i++){
     byte cmd = argv[i];
     switch (cmd) {
-      DHT_SET_HIGH:
-      DHT_SET_LOW:
+      case DHT_SET_HIGH:
+      case DHT_SET_LOW:
              pinMode(pin, OUTPUT);
              digitalWrite(pin, cmd);
              delay(argv[i+1]);
              i++; // 2-byte command
              break;
-      DHT_WAIT_HIGH:
-      DHT_WAIT_LOW:
+      case DHT_WAIT_HIGH:
+      case DHT_WAIT_LOW:
              byte tempbuf[2];
              cmd = dht_read(PIN_TO_DIGITAL(pin),tempbuf,1,cmd-DHT_WAIT_OFFSET, argv[i+1]);
              if(!cmd)
                 return DHTLIB_ERROR_TIMEOUT;
              i++ // 2-byte command;
              break; 
-      DHT_READ_HIGH:
-      DHT_READ_LOW:
+      case DHT_READ_HIGH:
+      case DHT_READ_LOW:
              cmd = dht_read(PIN_TO_DIGITAL(pin),buffer + bufpos, min(argv[i+1], buflen - bufpos), cmd-DHT_READ_OFFSET, argv[i+2] );
              if(!cmd)
                 return DHTLIB_ERROR_TIMEOUT;
