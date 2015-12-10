@@ -88,31 +88,25 @@ uint8_t DhtFirmata::processCommand(byte pin, byte* buffer,uint8_t buflen, byte a
 
   for(i=0;i<argc;i++){
     byte cmd = argv[i];
-    switch (cmd) {
-      case DHT_SET_HIGH:
-      case DHT_SET_LOW:
+    // switch did not work somehow
+    if (cmd == DHT_SET_HIGH || cmd == DHT_SET_LOW ){
              pinMode(pin, OUTPUT);
              digitalWrite(pin, cmd);
              delay(argv[i+1]);
              i++; // 2-byte command
-             break;
-      case DHT_WAIT_HIGH:
-      case DHT_WAIT_LOW:
+    } else if (cmd == DHT_WAIT_HIGH || cmd == DHT_WAIT_LOW ){
              byte tempbuf[2];
              cmd = dht_read(pin,tempbuf,0,cmd-DHT_WAIT_OFFSET, argv[i+1]);
              if(errorcode)
                 return i;
              i++; // 2-byte command;
-             break; 
-      case DHT_READ_HIGH:
-      case DHT_READ_LOW:
+    } else if (cmd == DHT_READ_HIGH || cmd == DHT_READ_LOW ){
              cmd = dht_read(pin,buffer + bufpos, min(argv[i+1], buflen - bufpos), cmd-DHT_READ_OFFSET, argv[i+2] );
              if(errorcode)
                 return i;
              bufpos += cmd;
              i+=2; // 3-byte: command, length, timeout
-             break;
-      defaut:
+    } else {
              errorcode=64;
              return i;
     }
@@ -129,11 +123,13 @@ boolean DhtFirmata::handleSysex(byte command, byte argc, byte* argv)
 
   byte pin= argv[0];
   errorcode=0; 
-  uint8_t readCnt = processCommand(PIN_TO_DIGITAL(pin),buffer,MAX_DATA_BYTES,argc-1,argv+1);
 
   Firmata.write(START_SYSEX);
   Firmata.write(DHT_RESPONSE);
   Firmata.write(pin);
+
+  uint8_t readCnt = processCommand(PIN_TO_DIGITAL(pin),buffer,MAX_DATA_BYTES,argc-1,argv+1);
+
   Firmata.write(errorcode);
   Firmata.write(readCnt);
   Encoder7Bit.startBinaryWrite();
