@@ -50,6 +50,7 @@ class DhtFirmata: public FirmataFeature
     void handleCapability(byte pin);
     boolean handleSysex(byte command, byte argc, byte* argv);
     void reset();
+   uint8_t errorcode;
 
   private:
     // data pinDht[TOTAL_PINS];
