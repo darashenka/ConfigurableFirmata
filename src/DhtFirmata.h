@@ -13,8 +13,9 @@
 /*
  DHT-Like type of device. Uses PWM-Like modulation to transmit data
 
- DHT_QUERY(pin,CMD_FLOW) - command have following syntax:
- CMD_FLOW is a list of command with args ...
+ DHT_QUERY(pin,time_multiplier,CMD_FLOW) - command have following syntax:
+ - time_multiplier - multiply all timeouts and divide all times by this value. usual timeouts 0-127 msec are too small sometimes
+ - CMD_FLOW is a list of command with args ...
    DHT_SET_LOW, DHT_SET_HIGH (timeout) - set pin to HIGH/LOW and wait param1 microsec
    DHT_WAIT_LOW,DHT_WAIT_HIGH (timeout) - wait for max timeout(msec) for signal on pin
    DHT_READ_LOW/DHT_READ_HIGH (Nchanges,timeout)- measure delays in N signal-level changes (low to high and back), starting with specified with timeout (msec)
@@ -55,8 +56,8 @@ class DhtFirmata: public FirmataFeature
   private:
     // data pinDht[TOTAL_PINS];
     // void oneWireConfig(byte pin, boolean power);
-   uint8_t dht_read(byte pin, byte*buffer, uint8_t buflen, byte initiallevel, byte timeout);
-   uint8_t processCommand(byte pin, byte* buffer,uint8_t buflen, byte argc, byte* argv);
+   uint8_t dht_read(byte pin,uint8_t multiplier, byte*buffer, uint8_t buflen, byte initiallevel, uint16_t timeout);
+   uint8_t processCommand(byte pin,uint8_t multiplier, byte* buffer,uint8_t buflen, byte argc, byte* argv);
 
 };
 
