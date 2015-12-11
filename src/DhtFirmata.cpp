@@ -40,9 +40,6 @@ uint8_t DhtFirmata::dht_read(byte pin, uint8_t multiplier, byte*buffer, uint8_t 
   uint16_t loopCnt;
   uint16_t maxLoopCnt = clockCyclesPerMicrosecond() * (uint32_t)multiplier * (uint32_t)timeout0;
 
-  Encoder7Bit.writeBinary(maxLoopCnt & 0xFF);
-  Encoder7Bit.writeBinary(maxLoopCnt >> 8);
-
   pinMode(pin, INPUT_PULLUP);
   delayMicroseconds(10);
 
@@ -70,11 +67,12 @@ uint8_t DhtFirmata::dht_read(byte pin, uint8_t multiplier, byte*buffer, uint8_t 
     {
 
         loopCnt = 0;
+        // this loop takes ca. 1-2us on 16MHZ
         while((*PIR & bit) == initiallevel)
         {
             if (loopCnt++ > maxLoopCnt ) { errorcode=3; return idx; }
         }
-        buffer [idx] = byte( loopCnt & 0x7F ) | initiallevel;
+        buffer [idx] = byte( ((loopCnt/multiplier)) & 0x7F );
         
         initiallevel = initiallevel ? LOW : bit;
     }
@@ -153,6 +151,7 @@ boolean DhtFirmata::handleSysex(byte command, byte argc, byte* argv)
   Encoder7Bit.startBinaryWrite();
 
   uint8_t readCnt = processCommand(PIN_TO_DIGITAL(pin),multiplier,buffer,MAX_DATA_BYTES,argc-2,argv+2);
+
   Encoder7Bit.writeBinary(errorcode);
   Encoder7Bit.writeBinary(readCnt);
 
