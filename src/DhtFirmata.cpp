@@ -40,7 +40,8 @@ uint8_t DhtFirmata::dht_read(byte pin, uint8_t multiplier, byte*buffer, uint8_t 
   uint32_t loopCnt;
   uint32_t startLoopCnt = clockCyclesPerMicrosecond() * (uint32_t)multiplier * (uint32_t)timeout0;
 
-  pinMode(pin, INPUT);
+  pinMode(pin, INPUT_PULLUP);
+  delayMicroseconds(10);
 
   // replace digitalRead() with Direct Port Reads.
   // reduces footprint ~100 bytes => portability issue?
@@ -94,8 +95,22 @@ uint8_t DhtFirmata::processCommand(byte pin, byte multiplier, byte* buffer,uint8
     if (cmd == DHT_SET_HIGH || cmd == DHT_SET_LOW ){
              pinMode(pin, OUTPUT);
              digitalWrite(pin, cmd);
-             delay(multiplier*argv[i+1]); // hier is milliseconds
-             i++; // 2-byte command
+    } else if (cmd == DHT_SLEEP_MILLI ) {
+             delay(argv[i+1]);
+             i++;
+    } else if (cmd == DHT_SLEEP_MICRO ) {
+             delayMicroseconds(argv[i+1]);
+             i++;
+    } else if (cmd == DHT_SLEEP_MILLI_LONG ) {
+             delay(argv[i+1]*argv[i+2]);
+             i+=2;
+    } else if (cmd == DHT_SLEEP_MICRO_LONG ) {
+             delayMicroseconds(argv[i+1]*argv[i+2]);
+             i+=2;
+/*
+    } else if (cmd == DHT_SET_PULLUP) {
+             pinMode(pin, INPUT_PULLUP);
+*/
     } else if (cmd == DHT_WAIT_HIGH || cmd == DHT_WAIT_LOW ){
              byte tempbuf[2];
              cmd = dht_read(pin,multiplier,tempbuf,0,cmd-DHT_WAIT_OFFSET,argv[i+1]);
@@ -140,7 +155,7 @@ boolean DhtFirmata::handleSysex(byte command, byte argc, byte* argv)
   Firmata.write(errorcode);
   Firmata.write(readCnt);
   Encoder7Bit.startBinaryWrite();
-  for (i = 0;!errorcode && i < readCnt; i++) 
+  for (i = 0;i < readCnt; i++) 
     Encoder7Bit.writeBinary(buffer[i]);
   Encoder7Bit.endBinaryWrite();
   Firmata.write(END_SYSEX);

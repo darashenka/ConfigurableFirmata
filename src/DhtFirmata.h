@@ -43,6 +43,12 @@
 #define DHT_READ_OFFSET 4
 #define DHT_READ_LOW (DHT_READ_OFFSET+LOW)
 #define DHT_READ_HIGH (DHT_READ_OFFSET+HIGH)
+#define DHT_SLEEP_MICRO 6
+#define DHT_SLEEP_MILLI 7
+#define DHT_SLEEP_MICRO_LONG 8
+#define DHT_SLEEP_MILLI_LONG 9
+//#define DHT_SET_PULLUP 8
+
 
 class DhtFirmata: public FirmataFeature
 {
