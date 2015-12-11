@@ -56,6 +56,7 @@ uint8_t DhtFirmata::dht_read(byte pin, uint8_t multiplier, byte*buffer, uint8_t 
 
   // waif for initial
   loopCnt = 0;
+  initiallevel = initiallevel ? bit : LOW;
   while( (*PIR & bit) != initiallevel ){
        if (loopCnt++ > maxLoopCnt ) { errorcode=2; return 0; }
   }
@@ -75,7 +76,7 @@ uint8_t DhtFirmata::dht_read(byte pin, uint8_t multiplier, byte*buffer, uint8_t 
         }
         buffer [idx] = byte( loopCnt & 0x7F ) | initiallevel;
         
-        initiallevel = (initiallevel == HIGH ? LOW : HIGH); // invert expectd value
+        initiallevel = initiallevel ? LOW : bit;
     }
   }
   return idx;
@@ -149,11 +150,11 @@ boolean DhtFirmata::handleSysex(byte command, byte argc, byte* argv)
   Firmata.write(DHT_RESPONSE);
   Firmata.write(pin);
   Firmata.write(multiplier);
-  Firmata.write(errorcode);
-  Firmata.write(readCnt);
   Encoder7Bit.startBinaryWrite();
 
   uint8_t readCnt = processCommand(PIN_TO_DIGITAL(pin),multiplier,buffer,MAX_DATA_BYTES,argc-2,argv+2);
+  Encoder7Bit.writeBinary(errorcode);
+  Encoder7Bit.writeBinary(readCnt);
 
   for (i = 0;i < readCnt; i++) 
     Encoder7Bit.writeBinary(buffer[i]);
