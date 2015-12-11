@@ -137,7 +137,7 @@ boolean DhtFirmata::handleSysex(byte command, byte argc, byte* argv)
   if (argc < 2)
     return false;
 
-  byte buffer[MAX_DATA_BYTES];
+  byte buffer[2*MAX_DATA_BYTES];
   uint8_t i = 0;
 
   byte pin= argv[0];
@@ -150,7 +150,7 @@ boolean DhtFirmata::handleSysex(byte command, byte argc, byte* argv)
   Firmata.write(multiplier);
   Encoder7Bit.startBinaryWrite();
 
-  uint8_t readCnt = processCommand(PIN_TO_DIGITAL(pin),multiplier,buffer,MAX_DATA_BYTES,argc-2,argv+2);
+  uint8_t readCnt = processCommand(PIN_TO_DIGITAL(pin),multiplier,buffer,sizeof(buffer),argc-2,argv+2);
 
   Encoder7Bit.writeBinary(errorcode);
   Encoder7Bit.writeBinary(readCnt);
