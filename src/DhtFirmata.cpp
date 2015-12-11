@@ -37,15 +37,10 @@ uint8_t DhtFirmata::dht_read(byte pin, uint8_t multiplier, byte*buffer, uint8_t 
 {
 
   uint8_t idx = 0;
-  uint16_t loopCnt;
-  uint16_t startLoopCnt = (F_CPU/40000)*(uint16_t)multiplier;
+  uint32_t loopCnt;
+  uint32_t startLoopCnt = clockCyclesPerMicrosecond() * (uint32_t)multiplier * (uint32_t)timeout0;
 
   pinMode(pin, INPUT);
-
-   // timestamp
-  uint32_t t = micros();
-  uint32_t tn = micros();
-  uint32_t timeout = timeout0 * multiplier;
 
   // replace digitalRead() with Direct Port Reads.
   // reduces footprint ~100 bytes => portability issue?
@@ -58,8 +53,10 @@ uint8_t DhtFirmata::dht_read(byte pin, uint8_t multiplier, byte*buffer, uint8_t 
   // waif for initial
   loopCnt = startLoopCnt;
   while( (*PIR & bit) != initiallevel ){
-       if (micros() - t > timeout  ) { errorcode=1; return 0;}
-       if (--loopCnt == 0) { errorcode=2; return 0;} // micros can overflow
+       if (--loopCnt == 0) {
+          errorcode=2;
+          return 0;
+       }
   }
   
 
@@ -67,20 +64,17 @@ uint8_t DhtFirmata::dht_read(byte pin, uint8_t multiplier, byte*buffer, uint8_t 
   {
     DhtInterruptLock lock;
 
-    for (t = micros(),idx = 0; idx < buflen; idx++)
+    for (idx = 0; idx < buflen; idx++)
     {
 
         loopCnt = startLoopCnt;
         while((*PIR & bit) == initiallevel)
         {
-            if (--loopCnt == 0) { errorcode=3; return 0; }
-            tn = micros();
-            if(tn - t > timeout ) { errorcode=4; return idx; }
+            if (--loopCnt == 0) { errorcode=3; return idx; }
         }
-        buffer [idx] = min((tn-t)/(multiplier),127);
+        buffer [idx] = min((startLoopCnt - loopCnt)/(4UL*multiplier),127UL);
         
-        initiallevel = initiallevel == HIGH ? LOW : HIGH; // invert expectd value
-        t = tn;
+        initiallevel = (initiallevel == HIGH ? LOW : HIGH); // invert expectd value
     }
   }
   return idx;
@@ -100,7 +94,7 @@ uint8_t DhtFirmata::processCommand(byte pin, byte multiplier, byte* buffer,uint8
     if (cmd == DHT_SET_HIGH || cmd == DHT_SET_LOW ){
              pinMode(pin, OUTPUT);
              digitalWrite(pin, cmd);
-             delayMicroseconds(multiplier*argv[i+1]);
+             delay(multiplier*argv[i+1]); // hier is milliseconds
              i++; // 2-byte command
     } else if (cmd == DHT_WAIT_HIGH || cmd == DHT_WAIT_LOW ){
              byte tempbuf[2];
