@@ -37,8 +37,11 @@ uint8_t DhtFirmata::dht_read(byte pin, uint8_t multiplier, byte*buffer, uint8_t 
 {
 
   uint8_t idx = 0;
-  uint32_t loopCnt;
-  uint32_t startLoopCnt = clockCyclesPerMicrosecond() * (uint32_t)multiplier * (uint32_t)timeout0;
+  uint16_t loopCnt;
+  uint16_t maxLoopCnt = clockCyclesPerMicrosecond() * (uint32_t)multiplier * (uint32_t)timeout0;
+
+  Encoder7Bit.writeBinary(maxLoopCnt & 0xFF);
+  Encoder7Bit.writeBinary(maxLoopCnt >> 8);
 
   pinMode(pin, INPUT_PULLUP);
   delayMicroseconds(10);
@@ -52,12 +55,9 @@ uint8_t DhtFirmata::dht_read(byte pin, uint8_t multiplier, byte*buffer, uint8_t 
 
 
   // waif for initial
-  loopCnt = startLoopCnt;
+  loopCnt = 0;
   while( (*PIR & bit) != initiallevel ){
-       if (--loopCnt == 0) {
-          errorcode=2;
-          return 0;
-       }
+       if (loopCnt++ > maxLoopCnt ) { errorcode=2; return 0; }
   }
   
 
@@ -68,12 +68,12 @@ uint8_t DhtFirmata::dht_read(byte pin, uint8_t multiplier, byte*buffer, uint8_t 
     for (idx = 0; idx < buflen; idx++)
     {
 
-        loopCnt = startLoopCnt;
+        loopCnt = 0;
         while((*PIR & bit) == initiallevel)
         {
-            if (--loopCnt == 0) { errorcode=3; return idx; }
+            if (loopCnt++ > maxLoopCnt ) { errorcode=3; return idx; }
         }
-        buffer [idx] = min((startLoopCnt - loopCnt)/(4UL*multiplier),127UL);
+        buffer [idx] = byte( loopCnt & 0x7F ) | initiallevel;
         
         initiallevel = (initiallevel == HIGH ? LOW : HIGH); // invert expectd value
     }
@@ -149,12 +149,12 @@ boolean DhtFirmata::handleSysex(byte command, byte argc, byte* argv)
   Firmata.write(DHT_RESPONSE);
   Firmata.write(pin);
   Firmata.write(multiplier);
-
-  uint8_t readCnt = processCommand(PIN_TO_DIGITAL(pin),multiplier,buffer,MAX_DATA_BYTES,argc-2,argv+2);
-
   Firmata.write(errorcode);
   Firmata.write(readCnt);
   Encoder7Bit.startBinaryWrite();
+
+  uint8_t readCnt = processCommand(PIN_TO_DIGITAL(pin),multiplier,buffer,MAX_DATA_BYTES,argc-2,argv+2);
+
   for (i = 0;i < readCnt; i++) 
     Encoder7Bit.writeBinary(buffer[i]);
   Encoder7Bit.endBinaryWrite();
